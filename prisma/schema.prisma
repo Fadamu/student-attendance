@@ -1,0 +1,101 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Student {
+  id                  String              @id @default(cuid())
+  matricNumber        String              @unique
+  fullName            String
+  email               String              @unique
+  passwordHash        String
+  department          String?
+  level               Int?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  enrollments         Enrollment[]
+  attendance          AttendanceRecord[]
+  passwordResetCodes  PasswordResetCode[]
+}
+
+model Course {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  department  String?
+  level       Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  enrollments Enrollment[]
+  sessions    AttendanceSession[]
+}
+
+model Enrollment {
+  id        String   @id @default(cuid())
+  studentId String
+  courseId  String
+  createdAt DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course  Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, courseId])
+}
+
+model AttendanceSession {
+  id        String           @id @default(cuid())
+  courseId  String
+  code      String           @unique
+  startsAt  DateTime
+  expiresAt DateTime
+  status    AttendanceStatus @default(ACTIVE)
+  createdAt DateTime         @default(now())
+
+  course  Course             @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  records AttendanceRecord[]
+
+  @@index([courseId])
+  @@index([code])
+}
+
+model AttendanceRecord {
+  id          String                 @id @default(cuid())
+  sessionId   String
+  studentId   String
+  checkedInAt DateTime               @default(now())
+  status      AttendanceRecordStatus @default(PRESENT)
+
+  session AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  student Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, studentId])
+  @@index([studentId])
+}
+
+model PasswordResetCode {
+  id        String   @id @default(cuid())
+  studentId String
+  codeHash  String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([expiresAt])
+}
+
+enum AttendanceStatus {
+  ACTIVE
+  CLOSED
+}
+
+enum AttendanceRecordStatus {
+  PRESENT
+}
